@@ -1,0 +1,56 @@
+INSTALLATION INSTRUCTIONS
+------------------------- for Debian 8 "jessie" server + PostgreSQL
+
+######### WARNING #########
+
+PostgreSQL support in MISP is experimental.
+We strongly discourage you from use on production systems.
+There may be serious bugs!
+We also don't support updates on PostgreSQL yet, so your installation may break.
+
+If you want to help improving PostgreSQL-support,
+Please make sure you have tried the newest commit from Github first.
+Also, please activate debug mode.
+After that, you may open an issue on Github and provide us with as much information on the issue as possible.
+
+###########################
+
+
+please follow Debian 8 install instructions - INSTALL.debian8.txt
+-------------------------
+
+# when it comes to installing mariadb in step 2, skip that part, instead:
+sudo apt-get install postgresql
+
+# instead of installing the php5-mysql package in step 2, install php5-pgsql
+sudo apt-get install php5-pgsql
+# activate the module
+sudo php5enmod pgsql
+# restart apache
+sudo service apache2 restart
+
+
+# in step 6 of the Debian install, you skip creating a mysql user, instead:
+# create user
+sudo -u postgres createuser misp
+# create database
+sudo -u postgres createdb -O misp misp
+# set password
+sudo -u postgres psql -U postgres
+postgres=# ALTER USER misp with password 'XXXXXXXXX';
+postgres=# \q
+
+# after that, load the basic database structure
+psql -U misp -d misp -f /var/www/MISP/INSTALL/POSTGRESQL.sql -h localhost -W
+
+
+# in step 8 of the Debian install, you configure Postgres instead of MySQL
+# the necessary lines are already they, you just have to activate them instead of the MySQL-lines
+# file: /var/www/MISP/app/Config/database.php
+# necessary options:
+# 'datasource' => 'Database/Postgres',
+# 'port' => 5432,
+
+
+# perhaps you accidently installed MySQL/MariaDB, too - but you can clean it up like this
+sudo apt-get remove mysql-server mysql-client mariadb-client mariadb-server php5-mysql
