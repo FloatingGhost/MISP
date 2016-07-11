@@ -22,6 +22,7 @@
 
 App::uses('Model', 'Model');
 App::uses('LogableBehavior', 'Assets.models/behaviors');
+App::uses('ConnectionManager', 'Model');
 
 /**
  * Application model for Cake.
@@ -109,6 +110,8 @@ class AppModel extends Model {
 
 	// SQL scripts for updates
 	public function updateDatabase($command) {
+		$dataSourceConfig = ConnectionManager::getDataSource('default')->config;
+		$dataSource = $dataSourceConfig['datasource'];
 		$sql = '';
 		$this->Log = ClassRegistry::init('Log');
 		$clean = true;
@@ -150,11 +153,23 @@ class AppModel extends Model {
 				$sql = 'ALTER TABLE `events` ADD UNIQUE (uuid);';
 				break;
 			case 'cleanSessionTable':
-				$sql = 'DELETE FROM `cake_sessions` WHERE `expires` < ' . time() . ';';
+				if ($dataSource == 'Database/Mysql') {
+					$sql = 'DELETE FROM `cake_sessions` WHERE `expires` < ' . time() . ';';
+				} else if ($dataSource == 'Database/Postgres') {
+					$sql = 'DELETE FROM cake_sessions WHERE expires < '. time() . ';';
+				} else {
+					throw new Exception('cleanSessionTable: unsupported datasource');
+				}
 				$clean = false;
 				break;
 			case 'destroyAllSessions':
-				$sql = 'DELETE FROM `cake_sessions`;';
+				if ($dataSource == 'Database/Mysql') {
+					$sql = 'DELETE FROM `cake_sessions`;';
+				} else if ($dataSource == 'Database/Postgres') {
+					$sql = 'DELETE FROM cake_sessions;';
+				} else {
+					throw new Exception('destroyAllSessions: unsupported datasource');
+				}
 				$clean = false;
 				break;
 			case 'addIPLogging':
