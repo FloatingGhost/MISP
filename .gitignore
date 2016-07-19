@@ -1,3 +1,4 @@
+__pycache__
 /vendors
 /app/Vendor
 /app/composer*
@@ -60,4 +61,5 @@
 /app/tmp/cached_exports/sha1/*
 /app/tmp/cached_exports/csv_all/*
 /app/tmp/cached_exports/csv_sig/*
+*.bak
 *.swp

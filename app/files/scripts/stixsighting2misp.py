@@ -8,16 +8,16 @@ def loadPackage(filename):
     try:
         data = STIXPackage.from_xml(filename)
     except:
-        print json.dumps(
+        print(json.dumps(
             {'success': 0,
-                'message': 'Could not read sightings file. ' + filename})
+                'message': 'Could not read sightings file. ' + filename}))
         sys.exit(1)
     try:
         data = data.to_dict()
         return data
     except:
-        print json.dumps(
-            {'success': 0, 'message': 'Could not parse the sightings file.'})
+        print(json.dumps(
+            {'success': 0, 'message': 'Could not parse the sightings file.'}))
         sys.exit(1)
 
 
@@ -27,8 +27,8 @@ def saveFile(data, filename):
             f.write(json.dumps(data))
             f.close()
     except:
-        print json.dumps(
-            {'success': 0, 'message': 'Could not write response file.'})
+        print(json.dumps(
+            {'success': 0, 'message': 'Could not write response file.'}))
         sys.exit(1)
     return True
 
@@ -49,7 +49,7 @@ def getValueFromIndicator(indicator):
 def getValuesFromObservable(observable):
     returnValue = observable.get("object", {}).get("properties", {})
     returnValue = returnValue.get("value")
-    if isinstance(returnValue, basestring):
+    if isinstance(returnValue, str):
         return [returnValue]
     elif returnValue is None:
         return []
@@ -72,7 +72,7 @@ def main(args):
         if not data["values"]:
             data["values"] = getValueFromIndicator(indicator)
     saveFile(data, filename + '.out')
-    print json.dumps({'success': 1, 'message': ''})
+    print(json.dumps({'success': 1, 'message': ''}))
 
 
 if __name__ == "__main__":

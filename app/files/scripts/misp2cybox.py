@@ -1,3 +1,4 @@
+import cybox
 from cybox.core import Object, Observable, ObservableComposition
 from cybox.objects.file_object import File
 from cybox.objects.address_object import Address
@@ -16,7 +17,7 @@ from cybox.objects.as_object import AutonomousSystem
 from stix.extensions.test_mechanism.snort_test_mechanism import *
 import ntpath, socket, sys
 from stix.indicator import Indicator
-
+from mixbox import idgen 
 this_module = sys.modules[__name__]
 
 hash_type_attributes = {"single":["md5", "sha1", "sha224", "sha256", "sha384", "sha512", "sha512/224", "sha512/256", "ssdeep", "imphash", "authentihash", "pehash", "tlsh", "x509-fingerprint-sha1"], "composite": ["filename|md5", "filename|sha1", "filename|sha224", "filename|sha256", "filename|sha384", "filename|sha512", "filename|sha512/224", "filename|sha512/256", "filename|authentihash", "filename|ssdeep", "filename|tlsh", "filename|imphash", "filename|pehash", "malware-sample"]}
@@ -68,15 +69,15 @@ def generateObservable(indicator, attribute):
         indicator.add_observable(observable)
     else:
         observable = None;
-        if (attribute["type"] in simple_type_to_method.keys()):
+        if (attribute["type"] in list(simple_type_to_method.keys())):
             action = getattr(this_module, simple_type_to_method[attribute["type"]], None)
             if (action != None):
                 property = action(indicator, attribute)
-		property.condition = "Equals"
+                property.condition = "Equals"
                 object = Object(property)
-                object.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":" + property.__class__.__name__ + "-" + attribute["uuid"]
+                object.id_ = idgen.__generator.namespace.prefix + ":" + property.__class__.__name__ + "-" + attribute["uuid"]
                 observable = Observable(object)
-                observable.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":observable-" + attribute["uuid"]
+                observable.id_ = idgen.__generator.namespace.prefix + ":observable-" + attribute["uuid"]
                 indicator.add_observable(observable)
 
 def resolveFileObservable(indicator, attribute):
@@ -250,30 +251,30 @@ def resolvePatternObservable(indicator, attribute):
 
 # create an artifact object for the malware-sample type.
 def createArtifactObject(indicator, attribute):
-    artifact = Artifact(data = attribute["data"])
-    artifact.parent.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":artifact-" + attribute["uuid"]
+    artifact = Artifact(data = bytes(attribute["data"], 'utf-8'))
+    artifact.parent.id_ = idgen.__generator.namespace.prefix + ":artifact-" + attribute["uuid"]
     observable = Observable(artifact)
-    observable.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":observable-artifact-" + attribute["uuid"]
+    observable.id_ = idgen.__generator.namespace.prefix + ":observable-artifact-" + attribute["uuid"]
     indicator.add_observable(observable)
 
 # return either a composition if data is set in attribute, or just an observable with a filename if it's not set
 def returnAttachmentComposition(attribute):
     file_object = File()
     file_object.file_name = attribute["value"]
-    file_object.parent.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":file-" + attribute["uuid"]
+    file_object.parent.id_ = idgen.__generator.namespace.prefix + ":file-" + attribute["uuid"]
     observable = Observable()
     if "data" in attribute:
         artifact = Artifact(data = attribute["data"])
-        artifact.parent.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":artifact-" + attribute["uuid"]
+        artifact.parent.id_ = idgen.__generator.namespace.prefix + ":artifact-" + attribute["uuid"]
         observable_artifact = Observable(artifact)
-        observable_artifact.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":observable-artifact-" + attribute["uuid"]
+        observable_artifact.id_ = idgen.__generator.namespace.prefix + ":observable-artifact-" + attribute["uuid"]
         observable_file = Observable(file_object)
-        observable_file.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":observable-file-" + attribute["uuid"]
+        observable_file.id_ = idgen.__generator.namespace.prefix + ":observable-file-" + attribute["uuid"]
         composition = ObservableComposition(observables = [observable_artifact, observable_file])
         observable.observable_composition = composition
     else:
         observable = Observable(file_object)
-    observable.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":observable-" + attribute["uuid"]
+    observable.id_ = idgen.__generator.namespace.prefix + ":observable-" + attribute["uuid"]
     if attribute["comment"] != "":
         observable.description = attribute["comment"]
     return observable
@@ -286,18 +287,18 @@ def generateEmailAttachmentObject(indicator, attribute):
     email = EmailMessage()
     email.attachments = Attachments()
     email.add_related(file_object, "Contains", inline=True)
-    file_object.parent.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":file-" + attribute["uuid"]
+    file_object.parent.id_ = idgen.__generator.namespace.prefix + ":file-" + attribute["uuid"]
     email.attachments.append(file_object.parent.id_)
-    email.parent.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":EmailMessage-" + attribute["uuid"]
+    email.parent.id_ = idgen.__generator.namespace.prefix + ":EmailMessage-" + attribute["uuid"]
     observable = Observable(email)
-    observable.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":observable-" + attribute["uuid"]
+    observable.id_ = idgen.__generator.namespace.prefix + ":observable-" + attribute["uuid"]
     indicator.observable = observable
 
 # split registry string into hive and key
 def resolveRegHive(regStr):
     regStr = regStr.lstrip('\\')
     regStrU = regStr.upper()
-    for hive in misp_reghive.iterkeys():
+    for hive in misp_reghive.keys():
         if regStrU.startswith(hive):
             return misp_reghive[hive], regStr[len(hive):]
     return None, regStr
