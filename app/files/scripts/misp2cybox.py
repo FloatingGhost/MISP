@@ -68,11 +68,11 @@ def generateObservable(indicator, attribute):
         indicator.add_observable(observable)
     else:
         observable = None;
-        if (attribute["type"] in simple_type_to_method.keys()):
+        if (attribute["type"] in list(simple_type_to_method.keys())):
             action = getattr(this_module, simple_type_to_method[attribute["type"]], None)
             if (action != None):
                 property = action(indicator, attribute)
-		property.condition = "Equals"
+                property.condition = "Equals"
                 object = Object(property)
                 object.id_ = cybox.utils.idgen.__generator.namespace.prefix + ":" + property.__class__.__name__ + "-" + attribute["uuid"]
                 observable = Observable(object)
@@ -297,7 +297,7 @@ def generateEmailAttachmentObject(indicator, attribute):
 def resolveRegHive(regStr):
     regStr = regStr.lstrip('\\')
     regStrU = regStr.upper()
-    for hive in misp_reghive.iterkeys():
+    for hive in misp_reghive.keys():
         if regStrU.startswith(hive):
             return misp_reghive[hive], regStr[len(hive):]
     return None, regStr

@@ -2478,16 +2478,23 @@ class Event extends AppModel {
 		$result = $tempFile->write(json_encode($events));
 		$scriptFile = APP . "files" . DS . "scripts" . DS . "misp2stix.py";
 
+    $pyver = "python".Configure::read("Python.version");
 		// Execute the python script and point it to the temporary filename
-		$result = shell_exec('python ' . $scriptFile . ' ' . $randomFileName . ' ' . $returnType . ' ' . Configure::read('MISP.baseurl') . ' "' . Configure::read('MISP.org') . '"');
-
-		// The result of the script will be a returned JSON object with 2 variables: success (boolean) and message
+		$result = shell_exec($pyver .' '. $scriptFile . ' ' . $randomFileName . ' ' . $returnType . ' ' . Configure::read('MISP.baseurl') . ' "' . Configure::read('MISP.org') . '"');
+    // The result of the script will be a returned JSON object with 2 variables: success (boolean) and message
 		// If success = 1 then the temporary output file was successfully written, otherwise an error message is passed along
 		$decoded = json_decode($result);
-		$result = array();
-		$result['success'] = $decoded->success;
-		$result['message'] = $decoded->message;
 
+    if (!$decoded) {
+      $result = array(
+                  "success"=>0,
+                  "message"=>$decoded
+                );
+    } else {
+		  $result = array();
+      $result['success'] = $decoded->success;
+		  $result['message'] = $decoded->message;
+    }
 		if ($result['success'] == 1) {
 			$file = new File(APP . "files" . DS . "scripts" . DS . "tmp" . DS . $randomFileName . ".out");
 			$result['data'] = $file->read();
