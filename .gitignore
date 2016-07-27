@@ -1,6 +1,8 @@
+*.py.bak
 *.bak	
 __pycache__
 /vendors
+/app/vendor
 /app/Vendor
 /app/composer*
 /lib
