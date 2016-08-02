@@ -120,11 +120,11 @@ def saveFile(args, pathname, package):
         #filename = "test.out"
         with open(filename, 'wb') as f:
             if args[2] == 'json':
-                f.write(package.to_json())
+                f.write(bytes(package.to_json(), 'utf-8'))
             else:
                 f.write(package.to_xml(auto_namespace=False, ns_dict=NS_DICT, schemaloc_dict=SCHEMALOC_DICT))
     except Exception as ex:
-        print((json.dumps({'error': str(ex), 'success' : 0, 'message' : 'The STIX file could not be written'})))
+        print((json.dumps({'error': str(ex), 'success' : 0, 'message' : 'The STIX file could not be written {}'.format(ex)})))
         sys.exit(1)
 
 #generate a package that will contain all of the event-packages
