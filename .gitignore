@@ -1,3 +1,6 @@
+.gnupg
+test.*
+*.out
 *.py.bak
 *.bak	
 __pycache__

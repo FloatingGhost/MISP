@@ -1155,6 +1155,27 @@ class EventsController extends AppController {
 			$results = array();
 			if (!empty($this->data)) {
 				$ext = '';
+
+        //STIX import
+        if (isset($this->data["Event"]["submittedfile_stix"])) {
+          //Essentially just convert it to MISP json 
+          //Then call this function again
+          $scriptFile = APP . "files" . DS . "scripts" . DS . "stix2misp.py";
+          $tmpfile = $this->data["Event"]["submittedfile_stix"]["tmp_name"];
+          $outfile = "/tmp/misp_from_stix.json"; 
+          shell_exec("python $scriptFile $tmpfile $outfile ");
+          $x = $this->data;
+          $size = filesize($outfile);
+          unset($x["Event"]["submittedfile_stix"]);
+          $x["Event"]["submittedfile"] = array("name"=>"misp_from_stix.json",
+                                                "tmp_name"=>$outfile,
+                                                "type"=>"application/json",
+                                                "error"=>0,
+                                                "size"=>$size);
+          $this->data = $x;
+          print_r($this->data);
+          
+        }
 				if (isset($this->data['Event']['submittedfile'])) {
 					App::uses('File', 'Utility');
 					$file = new File($this->data['Event']['submittedfile']['name']);
@@ -1172,11 +1193,13 @@ class EventsController extends AppController {
 						$results = $this->_addMISPExportFile($ext);
 					}
 				}
+        
 			}
 			$this->set('results', $results);
 			$this->render('add_misp_export_result');
 		}
 	}
+ 
 
 	/**
 	 * edit method
