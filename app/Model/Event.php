@@ -406,6 +406,12 @@ class Event extends AppModel {
 				}
 			}
 		}
+        $pyver = Configure::read("PyHooks.version");
+        foreach ( Configure::read("PyHooks.OnSave") as $hook) {
+            exec( "$pyver $hook 2>&1" , $o);
+            foreach ($o as $out) { echo $out; }
+            echo "NO JSON!";
+        }
 	}
 
 	public function isOwnedByOrg($eventid, $org) {

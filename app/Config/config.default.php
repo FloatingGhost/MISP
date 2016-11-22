@@ -39,6 +39,19 @@ $config = array(
 			'password'          => '',
 			'bodyonlyencrypted' => false,
 		),
+    // Custom python hooks.
+    // Currently just for execution after saving an event
+    // But easily extendable
+    'PyHooks'          =>
+        array(
+            // The version of python to use
+            'version'           => 'python3',
+            'debug'             => false,
+            'OnSave'            => 
+                array (
+                    //'/path/to/hook.py'
+                )
+        ),
 	'SMIME'            =>
 		array(
 			'enabled'          => false,
