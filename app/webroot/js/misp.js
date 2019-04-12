@@ -1912,16 +1912,6 @@ function quickFilterRemoteEvents(passedArgs, id) {
     window.location.href=url;
 }
 
-$('#quickFilterField').bind("enterKey",function(e){
-    $('#quickFilterButton').trigger("click");
-});
-$('#quickFilterField').keyup(function(e){
-    if(e.keyCode == 13)
-    {
-        $('#quickFilterButton').trigger("click");
-    }
-});
-
 function remoteIndexApplyFilters() {
     var url = actionUrl + '/' + $("#EventFilter").val();
     window.location.href = url;
@@ -2394,6 +2384,7 @@ function freetextImportResultsSubmit(id, count) {
                 category:$('#Attribute' + i + 'Category').val(),
                 type:$('#Attribute' + i + 'Type').val(),
                 to_ids:$('#Attribute' + i + 'To_ids')[0].checked,
+                disable_correlation:$('#Attribute' + i + 'Disable_correlation')[0].checked,
                 comment:$('#Attribute' + i + 'Comment').val(),
                 distribution:$('#Attribute' + i + 'Distribution').val(),
                 sharing_group_id:$('#Attribute' + i + 'SharingGroupId').val(),
@@ -2420,6 +2411,91 @@ function freetextImportResultsSubmit(id, count) {
         complete:function() {
             $(".loading").hide();
         },
+    });
+}
+
+function moduleResultsSubmit(id) {
+    var data_collected = {};
+    var temp;
+    if ($('.MISPObjects').length) {
+        var objects = [];
+        $(".MISPObject").each(function(o) {
+            var object_uuid = $(this).find('.ObjectUUID').text();
+            temp = {
+                uuid: object_uuid,
+                name: $(this).find('.ObjectName').text(),
+                meta_category: $(this).find('.ObjectMetaCategory').text(),
+                distribution: $(this).find('.ObjectDistribution').val(),
+                sharing_group_id: $(this).find('.ObjectSharingGroup').val()
+            }
+            if ($(this).has('.ObjectID').length) {
+                temp['id'] = $(this).find('.ObjectID').text();
+            }
+            if ($(this).has('.ObjectReferences').length) {
+                var references = [];
+                $(this).find('.ObjectReference').each(function() {
+                    var reference = {
+                        object_uuid: object_uuid,
+                        referenced_uuid: $(this).find('.ReferencedUUID').text(),
+                        relationhip_type: $(this).find('.Relationship').text()
+                    };
+                    references.push(reference);
+                });
+                temp['ObjectReference'] = references;
+            }
+            if ($(this).find('.ObjectAttributes').length) {
+                var object_attributes = [];
+                $(this).find('.ObjectAttribute').each(function(a) {
+                    attribute = {
+                        category: $(this).find('.AttributeCategory').text(),
+                        type: $(this).find('.AttributeType').text(),
+                        value: $(this).find('.AttributeValue').text(),
+                        uuid: $(this).find('.AttributeUuid').text(),
+                        to_ids: $(this).find('.AttributeToIds')[0].checked,
+                        disable_correlation: $(this).find('.AttributeDisableCorrelation')[0].checked,
+                        comment: $(this).find('.AttributeComment').val(),
+                        distribution: $(this).find('.AttributeDistribution').val(),
+                        sharing_group_id: $(this).find('.AttributeSharingGroup').val()
+                    }
+                    object_attributes.push(attribute);
+                });
+                temp['Attribute'] = object_attributes;
+            }
+            objects.push(temp);
+        });
+        data_collected['Object'] = objects;
+    }
+    if ($('.MISPAttributes').length) {
+        var attributes = [];
+        $('.MISPAttribute').each(function(a) {
+            temp = {
+                category: $(this).find('.AttributeCategory').text(),
+                type: $(this).find('.AttributeType').text(),
+                value: $(this).find('.AttributeValue').text(),
+                uuid: $(this).find('.AttributeUuid').text(),
+                to_ids: $(this).find('.AttributeToIds')[0].checked,
+                disable_correlation: $(this).find('.AttributeDisableCorrelation')[0].checked,
+                comment: $(this).find('.AttributeComment').val(),
+                distribution: $(this).find('.AttributeDistribution').val(),
+                sharing_group_id: $(this).find('.AttributeSharingGroup').val()
+            }
+            attributes.push(temp);
+        });
+        data_collected['Attribute'] = attributes;
+    }
+    $.ajax({
+        type: "post",
+        cache: false,
+        url: "/events/handleModuleResults/" + id,
+        beforeSend: function (XMLHttpRequest) {
+            $(".loading").show();
+        },
+        success:function (data, textStatus) {
+            window.location = '/events/view/' + id;
+        },
+        complete:function() {
+            $(".loading").hide();
+        }
     });
 }
 
@@ -3225,33 +3301,6 @@ function flashErrorPopover() {
     $("#gray_out").fadeIn();
 }
 
-$(".eventViewAttributeHover").mouseenter(function() {
-    $('#' + currentPopover).popover('destroy');
-    var type = $(this).attr('data-object-type');
-    var id = $(this).attr('data-object-id');
-
-    if (type + "_" + id in ajaxResults["hover"]) {
-        var element = $('#' + type + '_' + id + '_container');
-        element.popover({
-            title: attributeHoverTitle(id, type),
-            content: ajaxResults["hover"][type + "_" + id],
-            placement: attributeHoverPlacement(element),
-            html: true,
-            trigger: 'manual',
-            container: 'body'
-        }).popover('show');
-        currentPopover = type + '_' + id + '_container';
-    } else {
-      timer = setTimeout(function () {
-          runHoverLookup(type, id)
-        },
-        500
-      );
-    }
-}).mouseout(function() {
-    clearTimeout(timer);
-});
-
 function attributeHoverTitle(id, type) {
   return `<span>Lookup results:</span>
 		<i class="fa fa-search-plus useCursorPointer eventViewAttributePopup"
@@ -3290,15 +3339,6 @@ $('body').on('click', function (e) {
       $('#' + currentPopover).popover('destroy');
     }
   });
-});
-
-$(".queryPopover").click(function() {
-    url = $(this).data('url');
-    id = $(this).data('id');
-    $.get(url + '/' + id, function(data) {
-        $('#popover_form').html(data);
-        openPopup('#popover_form');
-    });
 });
 
 function serverOwnerOrganisationChange(host_org_id) {
@@ -3401,26 +3441,6 @@ function feedFormUpdate() {
         $('#HeadersDiv').show();
     }
 }
-
-$('.servers_default_role_checkbox').click(function() {
-    var id = $(this).data("id");
-    var state = $(this).is(":checked");
-    $(".servers_default_role_checkbox").not(this).attr('checked', false);
-    $.ajax({
-        beforeSend: function (XMLHttpRequest) {
-            $(".loading").show();
-        },
-        success:function (data, textStatus) {
-            handleGenericAjaxResponse(data);
-        },
-        complete:function() {
-            $(".loading").hide();
-        },
-        type:"get",
-        cache: false,
-        url: '/admin/roles/set_default/' + (state ? id : ""),
-    });
-});
 
 function setContextFields() {
     if (showContext) {
@@ -3680,16 +3700,6 @@ function checkRolePerms() {
     }
 }
 
-// clicking on an element with this class will select all of its contents in a
-// single click
-$('.quickSelect').click(function() {
-    var range = document.createRange();
-    var selection = window.getSelection();
-    range.selectNodeContents(this);
-    selection.removeAllRanges();
-    selection.addRange(range);
-});
-
 function updateMISP() {
     $.get( "/servers/update", function(data) {
         $("#confirmation_box").html(data);
@@ -3719,23 +3729,49 @@ function submitMISPUpdate() {
     });
 }
 
-$(".cortex-json").click(function() {
-    var cortex_data = $(this).data('cortex-json');
-    cortex_data = htmlEncode(JSON.stringify(cortex_data, null, 2));
-    var popupHtml = '<pre class="simplepre">' + cortex_data + '</pre>';
-    popupHtml += '<div class="close-icon useCursorPointer" onClick="closeScreenshot();"></div>';
-    $('#screenshot_box').html(popupHtml);
-    $('#screenshot_box').show();
-    $('#screenshot_box').css({'padding': '5px'});
-    left = ($(window).width() / 2) - ($('#screenshot_box').width() / 2);
-    if (($('#screenshot_box').height() + 250) > $(window).height()) {
-        $('#screenshot_box').height($(window).height() - 250);
-        $('#screenshot_box').css("overflow-y", "scroll");
-        $('#screenshot_box').css("overflow-x", "hidden");
-    }
-    $('#screenshot_box').css({'left': left + 'px'});
-    $("#gray_out").fadeIn();
-});
+function submitSubmoduleUpdate(clicked) {
+    var $clicked = $(clicked);
+    var submodule_path = $clicked.data('submodule');
+    $.ajax({
+        beforeSend: function (XMLHttpRequest) {
+            $clicked.addClass('fa-spin');
+        },
+        dataType:"html",
+        cache: false,
+        success:function (formHTML, textStatus) {
+            var $form = $(formHTML);
+            $('body').append($form);
+            var formData = $form.serialize();
+            $.ajax({
+                data: formData,
+                success:function (data, textStatus) {
+                    if (data.status) {
+                        var job_sent = data.job_sent !== undefined ? data.job_sent : false;
+                        var sync_result = data.sync_result !== undefined ? data.sync_result : '';
+                        updateSubModulesStatus(data.output, job_sent, sync_result);
+                    } else {
+                        showMessage('error', 'Something went wrong');
+                        $('#submoduleGitResultDiv').show();
+                        $('#submoduleGitResult').removeClass('green').addClass('red').text(data.output);
+                    }
+                },
+                error: function (data) {
+                    showMessage('error', 'Something went wrong');
+                    $('#submoduleGitResultDiv').show();
+                    $('#submoduleGitResult').removeClass('green').addClass('red').text(data.output);
+                },
+                complete:function() {
+                    $clicked.removeClass('fa-spin');
+                    $form.remove();
+                },
+                type:"post",
+                cache: false,
+                url:$form.attr('action'),
+            });
+        },
+        url:'/servers/getSubmoduleQuickUpdateForm/' + (submodule_path !== undefined ? btoa(submodule_path) : ''),
+    });
+}
 
 // Show $(id) if the enable parameter evaluates to true. Hide it otherwise
 function checkAndEnable(id, enable) {
@@ -3877,22 +3913,6 @@ function previewEventBasedOnUuids() {
     }
 }
 
-$('.add_object_attribute_row').click(function() {
-    var template_id = $(this).data('template-id');
-    var object_relation = $(this).data('object-relation');
-    var k = $('#last-row').data('last-row');
-    var k = k+1;
-    $('#last-row').data('last-row', k);
-    url = "/objects/get_row/" + template_id + "/" + object_relation + "/" + k;
-    $.get(url, function(data) {
-        $('#row_' + object_relation + '_expand').before($(data).fadeIn()).html();
-    });
-});
-
-$('.quickToggleCheckbox').toggle(function() {
-    var url = $(this).data('checkbox-url');
-});
-
 function checkNoticeList(type) {
     var fields_to_check = {
         "attribute": ["category", "type"]
@@ -3921,6 +3941,108 @@ function checkNoticeList(type) {
 }
 
 $(document).ready(function() {
+    $('#quickFilterField').bind("enterKey",function(e){
+        $('#quickFilterButton').trigger("click");
+    });
+    $('#quickFilterField').keyup(function(e){
+        if(e.keyCode == 13)
+        {
+            $('#quickFilterButton').trigger("click");
+        }
+    });
+    $(".eventViewAttributeHover").mouseenter(function() {
+        $('#' + currentPopover).popover('destroy');
+        var type = $(this).attr('data-object-type');
+        var id = $(this).attr('data-object-id');
+
+        if (type + "_" + id in ajaxResults["hover"]) {
+            var element = $('#' + type + '_' + id + '_container');
+            element.popover({
+                title: attributeHoverTitle(id, type),
+                content: ajaxResults["hover"][type + "_" + id],
+                placement: attributeHoverPlacement(element),
+                html: true,
+                trigger: 'manual',
+                container: 'body'
+            }).popover('show');
+            currentPopover = type + '_' + id + '_container';
+        } else {
+          timer = setTimeout(function () {
+              runHoverLookup(type, id)
+            },
+            500
+          );
+        }
+    }).mouseout(function() {
+        clearTimeout(timer);
+    });
+    $(".queryPopover").click(function() {
+        url = $(this).data('url');
+        id = $(this).data('id');
+        $.get(url + '/' + id, function(data) {
+            $('#popover_form').html(data);
+            openPopup('#popover_form');
+        });
+    });
+    $('.servers_default_role_checkbox').click(function() {
+        var id = $(this).data("id");
+        var state = $(this).is(":checked");
+        $(".servers_default_role_checkbox").not(this).attr('checked', false);
+        $.ajax({
+            beforeSend: function (XMLHttpRequest) {
+                $(".loading").show();
+            },
+            success:function (data, textStatus) {
+                handleGenericAjaxResponse(data);
+            },
+            complete:function() {
+                $(".loading").hide();
+            },
+            type:"get",
+            cache: false,
+            url: '/admin/roles/set_default/' + (state ? id : ""),
+        });
+    });
+    // clicking on an element with this class will select all of its contents in a
+    // single click
+    $('.quickSelect').click(function() {
+        var range = document.createRange();
+        var selection = window.getSelection();
+        range.selectNodeContents(this);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    });
+    $(".cortex-json").click(function() {
+        var cortex_data = $(this).data('cortex-json');
+        cortex_data = htmlEncode(JSON.stringify(cortex_data, null, 2));
+        var popupHtml = '<pre class="simplepre">' + cortex_data + '</pre>';
+        popupHtml += '<div class="close-icon useCursorPointer" onClick="closeScreenshot();"></div>';
+        $('#screenshot_box').html(popupHtml);
+        $('#screenshot_box').show();
+        $('#screenshot_box').css({'padding': '5px'});
+        left = ($(window).width() / 2) - ($('#screenshot_box').width() / 2);
+        if (($('#screenshot_box').height() + 250) > $(window).height()) {
+            $('#screenshot_box').height($(window).height() - 250);
+            $('#screenshot_box').css("overflow-y", "scroll");
+            $('#screenshot_box').css("overflow-x", "hidden");
+        }
+        $('#screenshot_box').css({'left': left + 'px'});
+        $("#gray_out").fadeIn();
+    });
+    $('.add_object_attribute_row').click(function() {
+        var template_id = $(this).data('template-id');
+        var object_relation = $(this).data('object-relation');
+        var k = $('#last-row').data('last-row');
+        var k = k+1;
+        $('#last-row').data('last-row', k);
+        url = "/objects/get_row/" + template_id + "/" + object_relation + "/" + k;
+        $.get(url, function(data) {
+            $('#row_' + object_relation + '_expand').before($(data).fadeIn()).html();
+        });
+    });
+    $('.quickToggleCheckbox').toggle(function() {
+        var url = $(this).data('checkbox-url');
+    });
     $(".correlation-expand-button").on("click", function() {
         $(this).parent().children(".correlation-expanded-area").show();
         $(this).parent().children(".correlation-collapse-button").show();
@@ -3955,7 +4077,7 @@ function queryEventLock(event_id, user_org_id) {
 
 function checkIfLoggedIn() {
     if (tabIsActive) {
-        $.get("/users/checkIfLoggedIn", function(data) {
+        $.get("/users/checkIfLoggedIn.json", function(data) {
             if (data.slice(-2) !== 'OK') {
                 window.location.replace(baseurl + "/users/login");
             }
@@ -3977,7 +4099,6 @@ function insertHTMLRestResponse() {
 function insertJSONRestResponse() {
     $('#rest-response-container').append('<p id="json-response-container" style="border: 1px solid blue; padding:5px;" />');
     var parsedJson = syntaxHighlightJson($('#rest-response-hidden-container').text());
-    console.log(parsedJson);
     $('#json-response-container').html(parsedJson);
 }
 
